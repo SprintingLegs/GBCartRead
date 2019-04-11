@@ -1,9 +1,11 @@
+
 /*
  GBCartRead
- Version: 1.8 Rev1
+ Version: 1.8 Rev2
  Author: Alex from insideGadgets (http://www.insidegadgets.com)
+ Fork by: Legs
  Created: 18/03/2011
- Last Modified: 26/05/2016
+ Last Modified: 11/04/2019
  
  GBCartRead is an Arduino based Gameboy Cartridge Reader which uses a C program or python script to interface with 
  the Arduino. GBCartRead allows you to dump your ROM, save the RAM and write to the RAM.
@@ -56,7 +58,7 @@ void setup() {
   PCMSK1 = (1<<PCINT9);
   PCICR = (1<<PCIE1);
   
-  Serial.begin(400000);
+  Serial.begin(57600);
 }
 
 void loop() {
@@ -84,7 +86,10 @@ void loop() {
       char headerChar = (char) read_byte(romAddress);
       if ((headerChar >= 0x30 && headerChar <= 0x57) || // 0-9
           (headerChar >= 0x41 && headerChar <= 0x5A) || // A-Z
-          (headerChar >= 0x61 && headerChar <= 0x7A)) { // a-z
+          (headerChar >= 0x61 && headerChar <= 0x7A) || // a-z
+          (headerChar == ' ') || (headerChar == '!') || //Special Characters
+          (headerChar == '\'')|| (headerChar == '?') || //Special Characters
+          (headerChar == '-') || (headerChar == '&')){  //Special Characters
             gameTitle[(romAddress-0x0134)] = headerChar;
       }
     }
@@ -239,6 +244,21 @@ void loop() {
       write_byte(0x0000, 0x00);
       Serial.flush(); // Flush any serial data that wasn't processed
     }
+  }
+
+  //Dump header
+  else if (strstr(readInput, "DUMPHEAD")) {
+    rd_wr_mreq_reset();
+    uint16_t romAddress = 0x0100;
+
+    uint8_t readData[64];
+    for (uint16_t romAddress = 0x0100; romAddress <= 0x13F; romAddress++) {
+      uint8_t headerChar = read_byte(romAddress);
+      readData[(romAddress-0x0100)] = headerChar;
+    }
+
+    Serial.write(readData, 64); // Send the 64 byte chunk
+
   }
 
   rd_wr_mreq_off();

@@ -1,9 +1,10 @@
 /*
  GBCartRead - C Interface
- Version: 1.8 Rev 1
+ Version: 1.8 Rev 2
  Author: Alex from insideGadgets (www.insidegadgets.com)
+ Fork by: Legs
  Created: 21/07/2013
- Last Modified: 26/05/2016
+ Last Modified: 11/04/2019
 
  */
 
@@ -31,6 +32,32 @@ int cartridgeType = 255;
 int romSize = 255;
 int ramSize = 255;
 int logoCheck = 0;
+
+//Replace instances of 1 char with another
+char* replace_char(char* str, char find, char replace){
+    char *current_pos = strchr(str,find);
+    while (current_pos){
+        *current_pos = replace;
+        current_pos = strchr(current_pos,find);
+    }
+    return str;
+}
+
+//Prepare for my preferred filename
+char* prepare_filename(char* str){
+	//Copy original string
+	char tokstrCopy[30];
+	strncpy(tokstrCopy, str, 30);
+
+	//Create prepend variable
+	char prepend[2] = "_";
+	//Concat string after the prepend
+	strcat(prepend, tokstrCopy);
+
+	//Copy new concat to str and return it
+	strncpy(str, prepend, 30);
+	return str;
+}
 
 // Read the config.ini file for the COM port to use
 void read_config(void) {
@@ -113,6 +140,75 @@ void write_to_file(char* filename, char* cmd, int blocksize) {
 	fclose(pFile);
 }
 
+void header_fix_test(char* filename, char* cmd, int blocksize) {
+	RS232_cputs(cport_nr, cmd);
+	
+	unsigned char buf[65];
+	int n = 0;
+	int waitingforheader = 0;
+	while (1) {
+		n = RS232_PollComport(cport_nr, buf, 64);
+		printf("#Writing header to file");
+		if (n > 0) {
+			buf[n] = 0;
+			
+			printf("#");
+
+			fflush(stdout);
+			break; // Got the data, exit
+		}
+		else {
+			waitingforheader++;
+			if (waitingforheader >= 10) {
+				break;
+			}
+			
+			#ifdef _WIN32
+			Sleep(50);
+			#else
+			usleep(50000); // Sleep for 100 milliseconds
+			#endif
+		}
+	}
+}
+
+// Write serial data to file - used for ROM and RAM dumping
+void write_header_to_file(char* filename, char* cmd, int blocksize) {
+	header_fix_test(filename, cmd, blocksize);
+	// Create a new file
+	FILE *pFile = fopen(filename, "wb");
+	RS232_cputs(cport_nr, cmd);
+	
+	unsigned char buf[65];
+	int n = 0;
+	int waitingforheader = 0;
+	while (1) {
+		n = RS232_PollComport(cport_nr, buf, 64);
+		printf("#Writing header to file");
+		if (n > 0) {
+			buf[n] = 0;
+			fwrite((char *) buf, 1, n, pFile);
+			
+			printf("#");
+
+			fflush(stdout);
+			break; // Got the data, exit
+		}
+		else {
+			waitingforheader++;
+			if (waitingforheader >= 10) {
+				break;
+			}
+			
+			#ifdef _WIN32
+			Sleep(50);
+			#else
+			usleep(50000); // Sleep for 100 milliseconds
+			#endif
+		}
+	}
+	fclose(pFile);
+}
 
 // Read from file to serial - used writing to RAM
 void read_from_file(char* filename, char* cmd) {
@@ -160,7 +256,7 @@ void read_from_file(char* filename, char* cmd) {
 int main() {
 	read_config();
 	
-	printf("GBCartRead v1.8 Rev 1 by insideGadgets\n");
+	printf("GBCartRead v1.8 Rev 1 by insideGadgets(small fixes and patches by Legs)\n");
 	printf("################################\n\n");
 	
 	printf("Opening COM PORT %d at %d baud...\n\n", cport_nr+1, bdrate);
@@ -179,7 +275,7 @@ int main() {
 	
 	char userInput = '0';
 	while (1) {
-		printf ("\nSelect an option below\n0. Read Header\n1. Dump ROM\n2. Save RAM\n3. Write RAM\n4. Exit\n");
+		printf ("\nSelect an option below\n0. Read Header\n1. Dump ROM\n2. Save RAM\n3. Write RAM\n4. Exit\n5. HeaderTest\n");
 		printf (">");
 		userInput = read_one_letter();
 		
@@ -216,7 +312,13 @@ int main() {
 				if (headercounter == 0) {
 					printf ("\nGame title... ");
 					printf ("%s\n", tokstr);
-					strncpy(gametitle, tokstr, 30);
+
+					char tokstrCopy[30];
+					strncpy(tokstrCopy, tokstr, 30);
+					replace_char(tokstrCopy, ' ', '-');//Replace the whitespace in the names with -'s for the file name'
+					prepare_filename(tokstrCopy);//Prepend an underscore for my naming format
+
+					strncpy(gametitle, tokstrCopy, 30);
 				}
 				if (headercounter == 1) {
 					printf ("MBC type... ");
@@ -358,6 +460,13 @@ int main() {
 		else if (userInput == '4') {
 			RS232_CloseComport(cport_nr);
 			return(0);
+		}
+		else if (userInput == '5') {    
+			printf ("\nDumping HEADER to %s.txt... ", gametitle);
+			strncpy(filename, gametitle, 20);
+			strcat(filename, ".txt");
+			write_header_to_file(filename, "DUMPHEAD\n", 64);
+			printf ("\nFinished\n");
 		}
 		else {  
 			printf ("\nOption not recognised, please try again.\n");
