@@ -1,3 +1,4 @@
 -When you choose a command, it looks for parts of the string. So commands need to have unique names
 -I should merge this with the romdump option too, once I have it working on it's own.
 -Find out why I apparently need to use that header fix.
+-I should add a function to Dump all header files from all roms in a folder.

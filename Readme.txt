@@ -64,6 +64,11 @@ Wisdom Tree - /Custom_Cartridge_Files/Wisdom_Tree/ - Provided by Benjamin E
 
 REVISION HISTORY
 =================================
+|v1.8 Rev 2 (11 April 2019)
+- When checking for gameTitle in the header, it will now look for things like whitespaces and special charaters(!?&) instead of terminating.
+- Added an option to dump the entire header to a file.
+- 
+
 v1.8 Rev 1 (28 May 2016)
 - Re-add checking for non-printable ASCII characters code that was removed when cleaning up code
 - Added custom cartridge files for Wisdom Tree games (thanks Benjamin E)

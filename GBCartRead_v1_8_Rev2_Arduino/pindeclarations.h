@@ -1,6 +1,6 @@
 #ifndef PIN_DECLARATIONS_H_
 #define PIN_DECLARATIONS_H_
-
+/*
 #define PA0 0
 #define PA1 1
 #define PA2 2
@@ -35,8 +35,7 @@
 #define PD4 4
 #define PD5 5
 #define PD6 6
-#define PD7 7
-
+*/
 #define wrPin_high    PORTC |= (1<<PC3);
 #define wrPin_low     PORTC &= ~(1<<PC3);
 #define mreqPin_high  PORTC |= (1<<PC4);
